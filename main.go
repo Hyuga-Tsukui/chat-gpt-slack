@@ -43,6 +43,18 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// URL Verificationの場合は、Challengeを返す
+	if eventsAPIEvent.Type == slackevents.URLVerification {
+		var r *slackevents.ChallengeResponse
+		err := json.Unmarshal([]byte(body), &r)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text")
+		w.Write([]byte(r.Challenge))
+	}
+
 	println(eventsAPIEvent.Type)
 
 	w.Write([]byte("Hello World"))
