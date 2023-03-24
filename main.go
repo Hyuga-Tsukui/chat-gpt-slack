@@ -12,7 +12,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 )
 
-var api = slack.New("TOKEN")
+var api = slack.New(os.Getenv("TOKEN"))
 
 func handle(w http.ResponseWriter, r *http.Request) {
 
