@@ -134,7 +134,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			log.Println("Message: ", message)
 			// userIdを取り除く
 			parttern := regexp.MustCompile("<@.+?>")
 
@@ -152,8 +151,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
-	w.Write([]byte("Hello World"))
 }
 
 func main() {
