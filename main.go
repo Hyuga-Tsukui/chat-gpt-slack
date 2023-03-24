@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 
@@ -63,7 +64,11 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		innerEvent := eventsAPIEvent.InnerEvent
 		switch ev := innerEvent.Data.(type) {
 		case *slackevents.AppMentionEvent:
-			api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false))
+			if _, _, err := api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false)); err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 
