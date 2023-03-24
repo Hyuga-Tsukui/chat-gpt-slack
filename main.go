@@ -11,6 +11,8 @@ import (
 	"github.com/slack-go/slack/slackevents"
 )
 
+var api = slack.New("TOKEN")
+
 func handle(w http.ResponseWriter, r *http.Request) {
 
 	signingSecret := os.Getenv("SLACK_SIGNING_SECRET")
@@ -56,6 +58,14 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	println(eventsAPIEvent.Type)
+
+	if eventsAPIEvent.Type == slackevents.CallbackEvent {
+		innerEvent := eventsAPIEvent.InnerEvent
+		switch ev := innerEvent.Data.(type) {
+		case *slackevents.AppMentionEvent:
+			api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false))
+		}
+	}
 
 	w.Write([]byte("Hello World"))
 }
