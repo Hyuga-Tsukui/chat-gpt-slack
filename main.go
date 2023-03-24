@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
@@ -133,10 +134,18 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-
 			log.Println("Message: ", message)
+			// userIdを取り除く
+			parttern := regexp.MustCompile("<@.+?>")
 
-			if _, _, err := api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false)); err != nil {
+			reply, err := postChat(parttern.ReplaceAllString(message, ""))
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			if _, _, err := api.PostMessage(ev.Channel, slack.MsgOptionText(reply, false)); err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
