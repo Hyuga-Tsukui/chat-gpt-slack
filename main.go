@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +14,68 @@ import (
 )
 
 var api = slack.New(os.Getenv("TOKEN"))
+
+type ChatGPTResponse struct {
+	Choices []struct {
+		Message struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+}
+
+type ChatGPTRequest struct {
+	Model    string `json:"model"`
+	Messages []struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	} `json:"messages"`
+}
+
+// ChatGPTにメッセージを送信する
+func postChat(message string) (string, error) {
+	url := "https://api.openai.com/v1/chat/completions"
+
+	// リクエストボディを作成する
+	var chatGPTRequest ChatGPTRequest
+	chatGPTRequest.Model = "gpt-3.5-turbo"
+	chatGPTRequest.Messages = append(chatGPTRequest.Messages, struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}{
+		Role:    "user",
+		Content: message,
+	})
+	// jsonに変換する
+	reqBody, err := json.Marshal(chatGPTRequest)
+	buf := bytes.NewBuffer(reqBody)
+
+	req, err := http.NewRequest("POST", url, buf)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+os.Getenv("OPENAI_API_KEY"))
+
+	// リクエストを送信する
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// レスポンスをパースする
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	var chatGPTResponse ChatGPTResponse
+	if err := json.Unmarshal(body, &chatGPTResponse); err != nil {
+		return "", err
+	}
+	return chatGPTResponse.Choices[0].Message.Content, nil
+}
 
 func handle(w http.ResponseWriter, r *http.Request) {
 
@@ -64,6 +127,15 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		innerEvent := eventsAPIEvent.InnerEvent
 		switch ev := innerEvent.Data.(type) {
 		case *slackevents.AppMentionEvent:
+
+			message := ev.Text
+			if message == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			log.Println("Message: ", message)
+
 			if _, _, err := api.PostMessage(ev.Channel, slack.MsgOptionText("Yes, hello.", false)); err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
